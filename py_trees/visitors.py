@@ -21,6 +21,8 @@ runs its own method on the behaviour to do as it wishes - logging, introspecting
 # Imports
 ##############################################################################
 
+from . import common
+
 ##############################################################################
 # Visitors
 ##############################################################################
@@ -167,3 +169,35 @@ class WindsOfChangeVisitor(VisitorBase):
                 self.changed = True
         except KeyError:
             self.changed = True
+
+class CoverageVisitor(VisitorBase):
+    """
+    Visits the ticked part of a tree, recording statistics on how many times
+    each node is ticked, and what status is returned.
+
+    Attributes:
+        changed (Bool): flagged if there is a difference in the visited path or :class:`~py_trees.common.Status` of any behaviour on the path
+        ticked_nodes (dict): dictionary of behaviour id (uuid.UUID) and status (:class:`~py_trees.common.Status`) pairs from the current tick
+        previously_ticked+nodes (dict): dictionary of behaviour id (uuid.UUID) and status (:class:`~py_trees.common.Status`) pairs from the previous tick
+        running_nodes([uuid.UUID]): list of id's for behaviours which were traversed in the current tick
+        previously_running_nodes([uuid.UUID]): list of id's for behaviours which were traversed in the last tick
+    """
+    def __init__(self):
+        super(CoverageVisitor, self).__init__(full=False)
+        self.times_ticked = {}
+        self.times_returned = {}
+        self.times_returned[common.Status.RUNNING]={}
+        self.times_returned[common.Status.SUCCESS]={}
+        self.times_returned[common.Status.FAILURE]={}
+
+    def _value(self, stats_dict, id):
+        if id in stats_dict.keys():
+            return(stats_dict[id])
+        else:
+            return(0)
+
+    def run(self, behaviour):
+        self.times_ticked[behaviour.id] = self._value(self.times_ticked,behaviour.id)+1
+        if behaviour.status in self.times_returned.keys():
+            self.times_returned[behaviour.status][behaviour.id] = self._value(self.times_returned[behaviour.status],behaviour.id) + 1
+

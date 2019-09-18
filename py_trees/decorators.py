@@ -38,6 +38,11 @@ Decorators with very specific functionality:
 * :class:`py_trees.decorators.StatusToBlackboard`
 * :class:`py_trees.decorators.Timeout`
 
+Decorators for testing purposes:
+
+* :class:`py_trees.decorators.CoverageCounter`
+* :class:`py_trees.decorators.TestInjector`
+
 And the X is Y family:
 
 * :class:`py_trees.decorators.FailureIsRunning`
@@ -77,6 +82,7 @@ combination of behaviours to affect the non-blocking characteristics.
 ##############################################################################
 
 import time
+import random
 
 from typing import Callable, Union  # noqa
 
@@ -615,7 +621,7 @@ class CoverageCounter(Decorator):
            number of times :data:`~py_trees.common.Status.FAILURE` returned)
 
         Returns:
-            :class:`tuple`: the statistics :class:`tuple`
+            :obj:`tuple`: the statistics :obj:`tuple`
         """
         return((self._times_ticked,
                 self._times_success,
@@ -634,7 +640,7 @@ class CoverageCounter(Decorator):
            n4 = number of times :data:`~py_trees.common.Status.FAILURE` returned)
 
         Returns:
-            :class:`str`: the statistics :class:`str`
+            :obj:`str`: the statistics :obj:`str`
         """
         report_message = 'T:{} S:{} R:{} F:{}'.format(self._times_ticked,
                                                       self._times_success,
@@ -644,7 +650,11 @@ class CoverageCounter(Decorator):
 
     def update(self):
         """
-        
+        Use the child node's status to update coverage statistics.  
+        Return child node status without modification.
+        The decorator's name is changed to include the latest coverage
+        statistics, so the visualization tools can be used to monitor
+        coverage.
         """
         self._times_ticked = self._times_ticked + 1
         if self.decorated.status == common.Status.SUCCESS:
@@ -658,4 +668,145 @@ class CoverageCounter(Decorator):
         # this means can look at a live report in the ASCII tree
         self.name = report_message
         return self.decorated.status
+
+class TestInjector(Decorator):
+    """
+    Encapsulates a behaviour and inject a test status if commanded.  Provides a 
+    built-in test capability for any tree.
+
+    Test status injection is only enabled if the Blackboard has an entry
+    'ENABLE_TEST_INJECT' set to 'True'.  This provides a global-level protection
+    against accidentally trying to control something real with test data still
+    in the system.  Use global_enable() and global_enable() to control this setting.
+
+    If test injection is not enabled, the child node will be ticked as normal and 
+    the child's status will be returned without modification.
+
+    If test injection is enabled and a fixed injection status is set, using 
+    set_override(STATUS), then the child will NOT be ticked and the decorator will
+    return STATUS to its parent.
+
+    If test injection is enabled and NO fixed injection status is set, using 
+    set_override(), then the child will NOT be ticked and the decorator will return
+    a random status to its parent.
+    """
+    def __init__(self,child,
+                 name=common.Name.AUTO_GENERATED):
+        """
+        Initialise with child and optional name.
+
+        Args:
+            child (:class:`~py_trees.behaviour.Behaviour`): the child to be decorated
+            name (:obj:`str`): the decorator name (can be None)
+        """
+        super(TestInjector, self).__init__(child=child)
+        self._fixed_override = None
+        self._random_override = False
+
+    def set_override(self,status=None):
+        """
+        Set the override mode of this injector.  If no status or 'None' provided,
+        injector set to return random status when in test mode.
+
+        Args:
+            :class:`~py_trees.common.Status`: (optional) the status to                             
+                       inject :class:`~py_trees.common.Status`
+        """
+        if status:
+            self._fixed_override = status
+            self._random_override = False
+        else:
+            self._fixed_override = None
+            self._random_override = True
+        if self.override_enabled():
+            print('OVERRIDE SET UP AND ACTIVE')
+        else:
+            print('OVERRIDE SET UP.  INACTIVE UNTIL GLOBAL OVERRIDE ON')
+
+    def disable_override(self):
+        """
+        Clear the override mode of this injector.  Subsequently, child
+        will be ticked whether or not in test mode globally.
+        """
+        self._fixed_override = None
+        self._random_override = False
+
+    def global_enable(self):
+        """
+        Enable test mode globally.  All test injectors in the tree will be 
+        set to test mode, and those which have set_override() set will
+        inject a test status instead of ticking their children.
+        """
+        bb = blackboard.Blackboard()
+        bb.ENABLE_TEST_INJECT = True
+        print('TEST INJECTION ENABLED: BEHAVIOURS WILL BE OVERRIDEN')
+
+    def global_disable(self):
+        """
+        Disable test mode globally.  All test injectors in the tree will be 
+        disabled and will tick their children instead of injecting test status.
+        """
+        bb = blackboard.Blackboard()
+        bb.ENABLE_TEST_INJECT = False
+        print('TEST INJECTION DISABLED: ALL BEHAVIOURS ACTIVE')
+
+    def override_enabled(self):
+        bb = blackboard.Blackboard()
+        global_enable = bb.get('ENABLE_TEST_INJECT')
+        if global_enable is None:
+            return False
+        elif not global_enable==True:
+            return False
+        if self._fixed_override:
+            return True
+        elif self._random_override:
+            return True
+        else:
+            return False
+
+    def _random_status(self):
+        """
+        Generate a random status, with (1/3) probability of each.
+        Returns:
+            :class:`~py_trees.common.Status`: the randomly-chosen :class:`~py_trees.common.Status`
+        """
+        r = 3*random.random()
+        if r<=1:
+            status = common.Status.SUCCESS
+        elif r<=2:
+            status = common.Status.RUNNING
+        else:
+            status = common.Status.FAILURE
+        return status
+
+    def update(self):
+        """
+        Bounce if test injection enabled
+        """
+        if self.override_enabled():
+            if self._fixed_override:
+                status = self._fixed_override
+                self.feedback_message = 'Manual test injects {}'.format(status.name)
+            elif self._random_override:
+                status = self._random_status()
+                self.feedback_message = 'Random test injects {}'.format(status.name)
+            self.logger.debug("{}.update()[bouncing]".format(self.__class__.__name__))
+            return status
+        self.feedback_message = 'Injection disabled'
+        return self.decorated.status
+    
+    def tick(self):
+        """
+        Copied from :class:`~py_trees.decorators.OneShot`, child ignored in test 
+        mode, ticked otherwise.
+        """
+        if self.override_enabled():
+            # ignore the child
+            for node in behaviour.Behaviour.tick(self):
+                yield node
+        else:
+            # tick the child
+            for node in Decorator.tick(self):
+                yield node
+
 

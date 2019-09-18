@@ -27,6 +27,7 @@ from . import composites
 from . import console
 from . import decorators
 from . import utilities
+from . import visitors
 
 ##############################################################################
 # Methods
@@ -485,3 +486,31 @@ def render_dot_tree(root: behaviour.Behaviour,
         writer(pathname)
         filenames[extension] = pathname
     return filenames
+
+def coverage_summary(root: behaviour.Behaviour,
+                     coverage_visitor: visitors.CoverageVisitor):
+    # get list of all nodes
+    node_list = [node for node in root.iterate()]
+    # calc proportion of all nodes ticked
+    num_nodes = len(node_list)
+    num_ticked = len(coverage_visitor.times_ticked)
+    s = '{}% ({}/{}) of all nodes ticked'.format(100*num_ticked/num_nodes,num_ticked,num_nodes)
+    # just extract leaf nodes
+    leaf_list = [node for node in node_list if len(node.children)==0 or is_instance(node,decorators.TestInjector)]
+    num_leaves = len(leaf_list)
+    ticked_leaves = [node for node in leaf_list if coverage_visitor._value(coverage_visitor.times_ticked,node.id)>0]
+    num_leaves_ticked = len(ticked_leaves)
+    s += "\n"+'{}% ({}/{}) of leaf nodes ticked'.format(100*num_leaves_ticked/num_leaves, num_leaves_ticked, num_leaves)
+    # leaf nodes that have returned all values
+    leaves_all_status = []
+    for node in leaf_list:
+        this_id = node.id
+        num_succ = coverage_visitor._value(coverage_visitor.times_returned[common.Status.SUCCESS], this_id)
+        num_run = coverage_visitor._value(coverage_visitor.times_returned[common.Status.RUNNING], this_id)
+        num_fail = coverage_visitor._value(coverage_visitor.times_returned[common.Status.FAILURE], this_id)
+        print((num_succ,num_run,num_fail))
+        leaves_all_status.append(node)
+    num_leaves_all = len(leaves_all_status)
+    s += "\n"+'{}% ({}/{}) of leaf nodes returned every status'.format(100*num_leaves_all/num_leaves, num_leaves_all, num_leaves)
+    return s
+
