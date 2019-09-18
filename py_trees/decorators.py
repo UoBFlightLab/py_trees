@@ -193,8 +193,7 @@ class StatusToBlackboard(Decorator):
             *,
             child: behaviour.Behaviour,
             variable_name: str,
-            name: str=common.Name.AUTO_GENERATED,
-    ):
+            name: str=common.Name.AUTO_GENERATED):
         super().__init__(name=name, child=child)
         self.blackboard_variable_name = variable_name
         self.blackboard = blackboard.Blackboard()
@@ -237,8 +236,7 @@ class EternalGuard(Decorator):
             *,
             child: behaviour.Behaviour,
             condition: Union[Callable[[], bool], Callable[[], common.Status]],
-            name: str=common.Name.AUTO_GENERATED,
-    ):
+            name: str=common.Name.AUTO_GENERATED):
         super().__init__(name=name, child=child)
         self.condition = condition
 
