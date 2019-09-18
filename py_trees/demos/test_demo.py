@@ -1,35 +1,6 @@
 import py_trees
 import random
 
-class CoverageCounter(py_trees.decorators.Decorator):
-    def __init__(self,child):
-        self.times_ticked = 0
-        self.times_success = 0
-        self.times_running = 0
-        self.times_failure = 0
-        super(CoverageCounter, self).__init__(child=child, name=self.coverage_report())
-
-    def coverage_report(self):
-        report_message = 'T:{} S:{} R:{} F:{}'.format(self.times_ticked,
-                                                      self.times_success,
-                                                      self.times_running,
-                                                      self.times_failure)
-        return(report_message)
-
-    def update(self):
-        self.times_ticked = self.times_ticked + 1
-        if self.decorated.status == py_trees.common.Status.SUCCESS:
-          self.times_success = self.times_success + 1
-        if self.decorated.status == py_trees.common.Status.RUNNING:
-          self.times_running = self.times_running + 1
-        if self.decorated.status == py_trees.common.Status.FAILURE:
-          self.times_failure = self.times_failure + 1
-        report_message = self.coverage_report()
-        #self.feedback_message = report_message
-        self.name = report_message
-        return self.decorated.status
-
-
 class TestInjector(py_trees.decorators.Decorator):
     def __init__(self,child):
         super(TestInjector, self).__init__(child=child)
@@ -138,12 +109,12 @@ class CoverageVisitor(py_trees.visitors.VisitorBase):
             has_f = (id in self.has_returned[py_trees.common.Status.FAILURE].keys())
             print('Node {} ticked {} times. Succeeded: {}; Running: {}; Failed: {}; '.format(id,self.times_ticked[id],has_s,has_r,has_f))
 
-N1 = CoverageCounter(py_trees.behaviours.Success(name='S1'))
-N2 = CoverageCounter(py_trees.behaviours.Success(name='S2'))
+N1 = py_trees.decorators.CoverageCounter(py_trees.behaviours.Success(name='S1'))
+N2 = py_trees.decorators.CoverageCounter(py_trees.behaviours.Success(name='S2'))
 Q1 = TestInjector(py_trees.behaviours.Running(name='R1'))
-N3 = CoverageCounter(Q1)
+N3 = py_trees.decorators.CoverageCounter(Q1)
 
-B1 = CoverageCounter(py_trees.composites.Sequence(children=[N1,N2,N3],name='demo'))
+B1 = py_trees.decorators.CoverageCounter(py_trees.composites.Sequence(children=[N1,N2,N3],name='demo'))
 
 T = py_trees.trees.BehaviourTree(B1)
 V1 = py_trees.visitors.SnapshotVisitor()

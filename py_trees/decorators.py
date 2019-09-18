@@ -586,3 +586,76 @@ class Condition(Decorator):
         if self.decorated.status == self.succeed_status:
             return common.Status.SUCCESS
         return common.Status.RUNNING
+
+class CoverageCounter(Decorator):
+    """
+    Encapsulates a behaviour and monitor its coverage, i.e. how many times
+    it is ticked and how often it returns each status.  Child node is always ticked
+    and decorator returns child status without modification.
+    """
+    def __init__(self,child):
+        """
+        Initialise with child
+
+        Args:
+            child (:class:`~py_trees.behaviour.Behaviour`): the child to be decorated
+        """
+        self._times_ticked = 0
+        self._times_success = 0
+        self._times_running = 0
+        self._times_failure = 0
+        super(CoverageCounter, self).__init__(child=child, name=self.coverage_report())
+
+    def get_report(self):
+        """
+        Get the statistics of the child node's ticks and status returns as a tuple:
+          (number of times ticked, 
+           number of times :data:`~py_trees.common.Status.SUCCESS` returned,
+           number of times :data:`~py_trees.common.Status.RUNNING` returned,
+           number of times :data:`~py_trees.common.Status.FAILURE` returned)
+
+        Returns:
+            :class:`tuple`: the statistics :class:`tuple`
+        """
+        return((self._times_ticked,
+                self._times_success,
+                self._times_running,
+                self._times_failure))
+
+    def coverage_report(self):
+        """
+        Get the statistics of the child node's ticks and status returns as a string:
+
+          T:<n1> S:<n2> R:<n3> F:<n4>
+
+           n1 = number of times ticked, 
+           n2 = number of times :data:`~py_trees.common.Status.SUCCESS` returned,
+           n3 = number of times :data:`~py_trees.common.Status.RUNNING` returned,
+           n4 = number of times :data:`~py_trees.common.Status.FAILURE` returned)
+
+        Returns:
+            :class:`str`: the statistics :class:`str`
+        """
+        report_message = 'T:{} S:{} R:{} F:{}'.format(self._times_ticked,
+                                                      self._times_success,
+                                                      self._times_running,
+                                                      self._times_failure)
+        return(report_message)
+
+    def update(self):
+        """
+        
+        """
+        self._times_ticked = self._times_ticked + 1
+        if self.decorated.status == common.Status.SUCCESS:
+          self._times_success = self._times_success + 1
+        if self.decorated.status == common.Status.RUNNING:
+          self._times_running = self._times_running + 1
+        if self.decorated.status == common.Status.FAILURE:
+          self._times_failure = self._times_failure + 1
+        report_message = self.coverage_report()
+        # change the name of the decorator node
+        # this means can look at a live report in the ASCII tree
+        self.name = report_message
+        return self.decorated.status
+
