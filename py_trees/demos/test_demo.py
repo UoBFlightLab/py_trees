@@ -145,7 +145,7 @@ N3 = CoverageCounter(Q1)
 
 B1 = CoverageCounter(py_trees.composites.Sequence(children=[N1,N2,N3],name='demo'))
 
-T = py_trees.BehaviourTree(B1)
+T = py_trees.trees.BehaviourTree(B1)
 V1 = py_trees.visitors.SnapshotVisitor()
 T.visitors.append(V1)
 V2 = CoverageVisitor()
@@ -163,6 +163,7 @@ for ii in range(20):
   if ii==9:
     Q1.disable_override()
   T.tick()
-  print(py_trees.display.ascii_tree(T.root,snapshot_information=V1))
+  print(py_trees.display.ascii_tree(T.root,visited=V1.visited,
+                                    previously_visited=V1.previously_visited))
 
 V2.report()
