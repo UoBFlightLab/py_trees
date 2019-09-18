@@ -487,14 +487,22 @@ def render_dot_tree(root: behaviour.Behaviour,
         filenames[extension] = pathname
     return filenames
 
-def coverage_summary(root: behaviour.Behaviour,
-                     coverage_visitor: visitors.CoverageVisitor):
-    # get list of all nodes
-    node_list = [node for node in root.iterate()]
-    # calc proportion of all nodes ticked
-    num_nodes = len(node_list)
-    num_ticked = len(coverage_visitor.times_ticked)
-    s = '{}% ({}/{}) of all nodes ticked'.format(100*num_ticked/num_nodes,num_ticked,num_nodes)
+def filter_ticked_nodes(node_list, coverage_visitor):
+    return [node for node in node_list if coverage_visitor._value(coverage_visitor.times_ticked,node.id)>0]
+
+def filter_all_status_nodes(node_list, coverage_visitor):
+    nodes_all_status = []
+    for node in node_list:
+        this_id = node.id
+        num_succ = coverage_visitor._value(coverage_visitor.times_returned[common.Status.SUCCESS], this_id)
+        num_run = coverage_visitor._value(coverage_visitor.times_returned[common.Status.RUNNING], this_id)
+        num_fail = coverage_visitor._value(coverage_visitor.times_returned[common.Status.FAILURE], this_id)
+        #print((num_succ,num_run,num_fail))
+        if num_succ>0 and num_run>0 and num_fail>0:
+            nodes_all_status.append(node)
+    return nodes_all_status
+
+def filter_leaf_nodes(node_list):
     # just extract leaf nodes
     leaf_list = []
     for node in node_list:
@@ -508,21 +516,36 @@ def coverage_summary(root: behaviour.Behaviour,
           # then replace the leaf with the tester in the leaf list
           leaf_list.append(node)
           leaf_list.remove(node.decorated)
+    return leaf_list
+
+def coverage_summary(root: behaviour.Behaviour,
+                     coverage_visitor: visitors.CoverageVisitor):
+    # get list of all nodes
+    node_list = [node for node in root.iterate()]
+    # calc proportion of all nodes ticked
+    num_nodes = len(node_list)
+    ticked_list = filter_ticked_nodes(node_list, coverage_visitor)
+    num_ticked = len(coverage_visitor.times_ticked)
+    s = '{}% ({}/{}) of all nodes ticked'.format(100*num_ticked/num_nodes,num_ticked,num_nodes)
+    # just extract leaf nodes
+    leaf_list = filter_leaf_nodes(node_list)
     num_leaves = len(leaf_list)
-    ticked_leaves = [node for node in leaf_list if coverage_visitor._value(coverage_visitor.times_ticked,node.id)>0]
+    ticked_leaves = filter_ticked_nodes(leaf_list,coverage_visitor)
     num_leaves_ticked = len(ticked_leaves)
     s += "\n"+'{}% ({}/{}) of leaf nodes ticked'.format(100*num_leaves_ticked/num_leaves, num_leaves_ticked, num_leaves)
     # leaf nodes that have returned all values
-    leaves_all_status = []
-    for node in leaf_list:
-        this_id = node.id
-        num_succ = coverage_visitor._value(coverage_visitor.times_returned[common.Status.SUCCESS], this_id)
-        num_run = coverage_visitor._value(coverage_visitor.times_returned[common.Status.RUNNING], this_id)
-        num_fail = coverage_visitor._value(coverage_visitor.times_returned[common.Status.FAILURE], this_id)
-        #print((num_succ,num_run,num_fail))
-        if num_succ>0 and num_run>0 and num_fail>0:
-            leaves_all_status.append(node)
+    leaves_all_status = filter_all_status_nodes(leaf_list,coverage_visitor)
     num_leaves_all = len(leaves_all_status)
     s += "\n"+'{}% ({}/{}) of leaf nodes returned every status'.format(100*num_leaves_all/num_leaves, num_leaves_all, num_leaves)
+    # just the tester nodes
+    tester_list = [node for node in node_list if isinstance(node,decorators.TestInjector)]
+    num_testers = len(tester_list)
+    ticked_testers = [node for node in tester_list if coverage_visitor._value(coverage_visitor.times_ticked,node.id)>0]
+    num_testers_ticked = len(ticked_testers)
+    s += "\n"+'{}% ({}/{}) of tester hat nodes ticked'.format(100*num_testers_ticked/num_testers, num_testers_ticked, num_testers)
+    testers_all_status = filter_all_status_nodes(tester_list,coverage_visitor)
+    num_testers_all = len(leaves_all_status)
+    s += "\n"+'{}% ({}/{}) of tester hat nodes returned every status'.format(100*num_testers_all/num_testers, num_testers_all, num_testers)
+    # return the whole string     
     return s
 
