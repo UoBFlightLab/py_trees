@@ -496,7 +496,18 @@ def coverage_summary(root: behaviour.Behaviour,
     num_ticked = len(coverage_visitor.times_ticked)
     s = '{}% ({}/{}) of all nodes ticked'.format(100*num_ticked/num_nodes,num_ticked,num_nodes)
     # just extract leaf nodes
-    leaf_list = [node for node in node_list if len(node.children)==0 or is_instance(node,decorators.TestInjector)]
+    leaf_list = []
+    for node in node_list:
+      # if it's a proper leaf
+      if len(node.children)==0:
+        leaf_list.append(node)
+      # if it's a tester hat...
+      if isinstance(node,decorators.TestInjector):
+        # and its child is a proper leaf
+        if len(node.decorated.children)==0:
+          # then replace the leaf with the tester in the leaf list
+          leaf_list.append(node)
+          leaf_list.remove(node.decorated)
     num_leaves = len(leaf_list)
     ticked_leaves = [node for node in leaf_list if coverage_visitor._value(coverage_visitor.times_ticked,node.id)>0]
     num_leaves_ticked = len(ticked_leaves)
@@ -508,8 +519,9 @@ def coverage_summary(root: behaviour.Behaviour,
         num_succ = coverage_visitor._value(coverage_visitor.times_returned[common.Status.SUCCESS], this_id)
         num_run = coverage_visitor._value(coverage_visitor.times_returned[common.Status.RUNNING], this_id)
         num_fail = coverage_visitor._value(coverage_visitor.times_returned[common.Status.FAILURE], this_id)
-        print((num_succ,num_run,num_fail))
-        leaves_all_status.append(node)
+        #print((num_succ,num_run,num_fail))
+        if num_succ>0 and num_run>0 and num_fail>0:
+            leaves_all_status.append(node)
     num_leaves_all = len(leaves_all_status)
     s += "\n"+'{}% ({}/{}) of leaf nodes returned every status'.format(100*num_leaves_all/num_leaves, num_leaves_all, num_leaves)
     return s
