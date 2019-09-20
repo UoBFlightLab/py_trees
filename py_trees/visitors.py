@@ -186,18 +186,30 @@ class CoverageVisitor(VisitorBase):
         super(CoverageVisitor, self).__init__(full=False)
         self.times_ticked = {}
         self.times_returned = {}
-        self.times_returned[common.Status.RUNNING]={}
-        self.times_returned[common.Status.SUCCESS]={}
-        self.times_returned[common.Status.FAILURE]={}
 
-    def _value(self, stats_dict, id):
-        if id in stats_dict.keys():
-            return(stats_dict[id])
+    def _times_ticked(self, id):
+        if id in self.times_ticked.keys():
+            return(self.times_ticked[id])
         else:
             return(0)
 
+    def _times_returned(self, id, status):
+        if (id,status) in self.times_returned.keys():
+            return(self.times_returned[(id,status)])
+        else:
+            return(0)
+
+    def was_ticked(self, node):
+        return(self._times_ticked(node.id)>0)
+
+    def all_status(self, node):
+        if self._times_returned(node.id,common.Status.SUCCESS)>0:
+            if self._times_returned(node.id,common.Status.RUNNING)>0:
+                if self._times_returned(node.id,common.Status.FAILURE)>0:
+                    return(True)
+        return(False)
+
     def run(self, behaviour):
-        self.times_ticked[behaviour.id] = self._value(self.times_ticked,behaviour.id)+1
-        if behaviour.status in self.times_returned.keys():
-            self.times_returned[behaviour.status][behaviour.id] = self._value(self.times_returned[behaviour.status],behaviour.id) + 1
+        self.times_ticked[behaviour.id] = self._times_ticked(behaviour.id) + 1
+        self.times_returned[(behaviour.id,behaviour.status)] = self._times_returned(behaviour.id, behaviour.status) + 1
 

@@ -612,7 +612,7 @@ class CoverageCounter(Decorator):
         self._times_failure = 0
         super(CoverageCounter, self).__init__(child=child, name=self.coverage_report())
 
-    def get_report(self):
+    def coverage_data(self):
         """
         Get the statistics of the child node's ticks and status returns as a tuple:
           (number of times ticked, 
@@ -716,10 +716,12 @@ class TestInjector(Decorator):
         else:
             self._fixed_override = None
             self._random_override = True
-        if self.override_enabled():
-            print('OVERRIDE SET UP AND ACTIVE')
+        if self._random_override:
+            print('{} set for random injection'.format(self.name))
         else:
-            print('OVERRIDE SET UP.  INACTIVE UNTIL GLOBAL OVERRIDE ON')
+            print('{} set to inject {}'.format(self.name,self._fixed_override))
+        if not self.override_enabled():
+            print('INJECTION INACTIVE UNTIL GLOBAL OVERRIDE ON')
 
     def clear_override(self):
         """
