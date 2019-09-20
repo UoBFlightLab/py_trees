@@ -723,7 +723,7 @@ class TestInjector(Decorator):
         else:
             print('OVERRIDE SET UP.  INACTIVE UNTIL GLOBAL OVERRIDE ON')
 
-    def disable_override(self):
+    def clear_override(self):
         """
         Clear the override mode of this injector.  Subsequently, child
         will be ticked whether or not in test mode globally.
