@@ -13,7 +13,10 @@ N3a = py_trees.decorators.TestInjector(N3)
 N4a = py_trees.decorators.TestInjector(N4)
 N5a = py_trees.decorators.TestInjector(N5)
 
-B1 = py_trees.decorators.CoverageCounter(py_trees.composites.Sequence(children=[N1a,N2a,N3a,N4a,N5a],name='demo'))
+N1b = py_trees.decorators.AssertNever(N1a, py_trees.common.Status.FAILURE, py_trees.common.Status.RUNNING)
+N3b = py_trees.decorators.AssertNever(N3a,py_trees.common.Status.FAILURE)
+
+B1 = py_trees.decorators.CoverageCounter(py_trees.composites.Sequence(children=[N1b,N2a,N3a,N4a,N5a],name='demo'))
 
 T = py_trees.trees.BehaviourTree(B1)
 
@@ -50,8 +53,8 @@ for ii in range(100):
 print(py_trees.display.coverage_summary(T.root,V2))
 
 # set random tests on rest
-N1a.disable_override()
-N2a.disable_override()
+N1a.clear_override()
+N2a.clear_override()
 N3a.set_override()
 
 for ii in range(100):

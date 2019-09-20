@@ -65,5 +65,71 @@ def test_injector():
   T.tick()
   assert(T.root.status==py_trees.common.Status.RUNNING)
 
+
+def test_assertS1():
+  S1 = py_trees.behaviours.Success(name='S1')
+  A1 = py_trees.decorators.AssertNever(S1,
+                                       py_trees.common.Status.RUNNING)
+  T = py_trees.trees.BehaviourTree(A1)
+  T.tick()
+  
+def test_assertS2():
+  S1 = py_trees.behaviours.Success(name='S1')
+  A1 = py_trees.decorators.AssertNever(S1,
+                                       py_trees.common.Status.FAILURE)
+  T = py_trees.trees.BehaviourTree(A1)
+  T.tick()
+
+def test_assertS3():
+  S1 = py_trees.behaviours.Success(name='S1')
+  A1 = py_trees.decorators.AssertNever(S1,
+                                       py_trees.common.Status.RUNNING,
+                                       py_trees.common.Status.FAILURE)
+  T = py_trees.trees.BehaviourTree(A1)
+  T.tick()
+
+def test_assertS4():
+  S1 = py_trees.behaviours.Success(name='S1')
+  A1 = py_trees.decorators.AssertNever(S1,
+                                       py_trees.common.Status.SUCCESS)
+  T = py_trees.trees.BehaviourTree(A1)
+  try:
+    T.tick()
+  except AssertionError:
+    pass
+
+def test_assertS5():
+  S1 = py_trees.behaviours.Success(name='S1')
+  A1 = py_trees.decorators.AssertNever(S1,
+                                       py_trees.common.Status.SUCCESS,
+                                       py_trees.common.Status.FAILURE)
+  T = py_trees.trees.BehaviourTree(A1)
+  try:
+    T.tick()
+  except AssertionError:
+    pass
+
+def test_assertS6():
+  S1 = py_trees.behaviours.Success(name='S1')
+  A1 = py_trees.decorators.AssertNever(S1,
+                                       py_trees.common.Status.SUCCESS,
+                                       py_trees.common.Status.RUNNING)
+  T = py_trees.trees.BehaviourTree(A1)
+  try:
+    T.tick()
+  except AssertionError:
+    pass
+
+def test_assertS7():
+  S1 = py_trees.behaviours.Success(name='S1')
+  A1 = py_trees.decorators.AssertNever(S1,
+                                       py_trees.common.Status.RUNNING,
+                                       py_trees.common.Status.SUCCESS)
+  T = py_trees.trees.BehaviourTree(A1)
+  try:
+    T.tick()
+  except AssertionError:
+    pass
+
 if __name__=="__main__":
   test_injector()

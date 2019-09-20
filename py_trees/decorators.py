@@ -690,16 +690,14 @@ class TestInjector(Decorator):
     set_override(), then the child will NOT be ticked and the decorator will return
     a random status to its parent.
     """
-    def __init__(self,child,
-                 name=common.Name.AUTO_GENERATED):
+    def __init__(self,child):
         """
-        Initialise with child and optional name.
+        Initialise with child.
 
         Args:
             child (:class:`~py_trees.behaviour.Behaviour`): the child to be decorated
-            name (:obj:`str`): the decorator name (can be None)
         """
-        super(TestInjector, self).__init__(child=child)
+        super(TestInjector, self).__init__(child=child,name='{}-tester'.format(child.name))
         self._fixed_override = None
         self._random_override = False
 
@@ -809,4 +807,33 @@ class TestInjector(Decorator):
             for node in Decorator.tick(self):
                 yield node
 
+class AssertNever(Decorator):
+    """
+    Encapsulates a behaviour and assert it never returns specified status values.
+    One or two prohibited status values can be specified.
+    """
+    def __init__(self,child,
+                 status,
+                 status2 = None,
+                 name=common.Name.AUTO_GENERATED):
+        """
+        Initialise with child, one or two prohibited status values, and optional name.
 
+        Args:
+            child (:class:`~py_trees.behaviour.Behaviour`): the child to be decorated
+            status (:class:`~py_trees.common.Status`): assert never has this status
+            status2 (:class:`~py_trees.common.Status`): (optional) assert never this status either
+            name (:obj:`str`): the decorator name (can be None)
+        """
+        super(AssertNever, self).__init__(child=child,name=name)
+        self._status = status
+        self._status2 = status2
+
+    def update(self):
+        """
+        Bounce if test injection enabled
+        """
+        assert self.decorated.status!=self._status, '{} returned {}'.format(self.decorated.name, self.decorated.status)
+        if self._status2:
+            assert self.decorated.status!=self._status2, '{} returned {}'.format(self.decorated.name, self.decorated.status)
+        return self.decorated.status
