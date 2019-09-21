@@ -504,12 +504,14 @@ def coverage_summary(root: behaviour.Behaviour,
     # check assertions
     assert_list = [node for node in node_list if isinstance(node,decorators.AssertNever)]
     (num_nodes,num_ticked,num_allsts) = coverage_stats(assert_list)
-    s += "\n"+'{}% ({}/{}) of asserts ticked'.format(100*num_ticked/num_nodes,num_ticked,num_nodes)
+    if num_nodes>0:
+        s += "\n"+'{}% ({}/{}) of asserts ticked'.format(100*num_ticked/num_nodes,num_ticked,num_nodes)
     # check testers
     tester_list = [node for node in node_list if isinstance(node,decorators.TestInjector)]
     (num_nodes,num_ticked,num_allsts) = coverage_stats(tester_list)
-    s += "\n"+'{}% ({}/{}) of testers ticked'.format(100*num_ticked/num_nodes,num_ticked,num_nodes)
-    s += "\n"+'{}% ({}/{}) of testers returned every status'.format(100*num_allsts/num_nodes,num_allsts,num_nodes)
+    if num_nodes>0:
+        s += "\n"+'{}% ({}/{}) of testers ticked'.format(100*num_ticked/num_nodes,num_ticked,num_nodes)
+        s += "\n"+'{}% ({}/{}) of testers returned every status'.format(100*num_allsts/num_nodes,num_allsts,num_nodes)
     return s
 
 def ascii_tree_coverage(root: behaviour.Behaviour,
