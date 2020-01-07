@@ -11,35 +11,38 @@ from py_trees.visitors import SnapshotVisitor, CoverageVisitor
 from py_trees.display import ascii_tree, ascii_tree_coverage, coverage_summary
 from py_trees.common import Status
 
-# the Success/Failure/Running leaf nodes
-# would be replaced by the drone interface
-chk_mode = TestInjector(Success('check_mode'))
-arm_cmd = Success(name='arm')
-is_armed = TestInjector(Success(name='is_armed'))
-take_off = Success(name='take_off')
-at_alt = TestInjector(Success(name='at_alt'))
-to_climb = Sequence('to_climb',[FailureIsRunning(chk_mode),
-                                arm_cmd,
-                                FailureIsRunning(is_armed),
-                                take_off,
-                                FailureIsRunning(at_alt)])
+class FlightTree(BehaviourTree):
 
-upld_cmd = Success('upload')
-chk_upld = FailureIsRunning(TestInjector(Success('check_upload')))
-strt_mis = Success('start_mission')
-wait_arr = FailureIsRunning(TestInjector(Success('check_arrived')))
-do_move = Sequence('do_move',[upld_cmd,
-                              chk_upld,
-                              strt_mis,
-                              wait_arr])
+  def __init__(self):
+    # the Success/Failure/Running leaf nodes
+    # would be replaced by the drone interface
+    self.chk_mode = TestInjector(Success('check_mode'))
+    self.arm_cmd = Success(name='arm')
+    self.is_armed = TestInjector(Success(name='is_armed'))
+    self.take_off = Success(name='take_off')
+    self.at_alt = TestInjector(Success(name='at_alt'))
+    self.to_climb = Sequence('to_climb',[FailureIsRunning(self.chk_mode),
+                                self.arm_cmd,
+                                FailureIsRunning(self.is_armed),
+                                self.take_off,
+                                FailureIsRunning(self.at_alt)])
 
-move_land = Sequence('move_land',[FailureIsSuccess(do_move),Success('land')])
+    self.upld_cmd = Success('upload')
+    self.chk_upld = FailureIsRunning(TestInjector(Success('check_upload')))
+    self.strt_mis = Success('start_mission')
+    self.wait_arr = FailureIsRunning(TestInjector(Success('check_arrived')))
+    self.do_move = Sequence('do_move',[self.upld_cmd,
+                                       self.chk_upld,
+                                       self.strt_mis,
+                                       self.wait_arr])
 
-flight = AssertNever(child=Sequence('operation',[to_climb,move_land]),
-                     status=Status.FAILURE)
+    self.move_land = Sequence('move_land',[FailureIsSuccess(self.do_move),Success('land')])
 
-#tree = BehaviourTree(OneShot(Sequence('operation',[to_climb,move_land])))
-tree = BehaviourTree(flight)
+    self.flight = AssertNever(child=Sequence('operation',[self.to_climb,self.move_land]),
+                         status=Status.FAILURE)
+    super().__init__(self.flight)
+
+tree = FlightTree()
 py_trees.display.render_dot_tree(tree.root)
 
 cov_vis = CoverageVisitor()
@@ -48,12 +51,12 @@ tree.add_visitor(cov_vis)
 tree.add_visitor(snp_vis)
 
 # by default, testing off
-chk_mode.global_disable()
+tree.chk_mode.global_disable()
 
 def random_test():
   # set all testers to random
   [node.set_override() for node in tree.root.iterate() if isinstance(node,TestInjector)]
-  chk_mode.global_enable()
+  tree.chk_mode.global_enable()
   for ii in range(100):
     tree.tick()
     print(ascii_tree(tree.root,
