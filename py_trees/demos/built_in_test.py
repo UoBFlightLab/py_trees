@@ -28,13 +28,13 @@ class FlightTree(BehaviourTree):
                                 FailureIsRunning(self.at_alt)])
 
     self.upld_cmd = Success('upload')
-    self.chk_upld = FailureIsRunning(TestInjector(Success('check_upload')))
+    self.chk_upld = TestInjector(Success('check_upload'))
     self.strt_mis = Success('start_mission')
-    self.wait_arr = FailureIsRunning(TestInjector(Success('check_arrived')))
+    self.wait_arr = TestInjector(Success('check_arrived'))
     self.do_move = Sequence('do_move',[self.upld_cmd,
-                                       self.chk_upld,
+                                       FailureIsRunning(self.chk_upld),
                                        self.strt_mis,
-                                       self.wait_arr])
+                                       FailureIsRunning(self.wait_arr)])
 
     self.move_land = Sequence('move_land',[FailureIsSuccess(self.do_move),Success('land')])
 
