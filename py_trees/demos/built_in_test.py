@@ -40,6 +40,7 @@ flight = AssertNever(child=Sequence('operation',[to_climb,move_land]),
 
 #tree = BehaviourTree(OneShot(Sequence('operation',[to_climb,move_land])))
 tree = BehaviourTree(flight)
+py_trees.display.render_dot_tree(tree.root)
 
 cov_vis = CoverageVisitor()
 snp_vis = SnapshotVisitor()
@@ -69,4 +70,4 @@ def nominal_test():
   print(coverage_summary(tree.root,cov_vis))
 
 if __name__=='__main__':
-  nominal_test()
+  random_test()
